@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>FundMe DApp</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.min.js"></script>
+</head>
+
+<body>
+    <h1>FundMe DApp</h1>
+
+    <button id="connectBtn">Connect Wallet</button>
+    <p id="account"></p>
+
+    <input id="fundAmount" type="text" placeholder="ETH amount">
+    <button id="fundBtn">Fund</button>
+
+    <button id="withdrawBtn">Withdraw (Owner Only)</button>
+
+    <p id="status"></p>
+
+    <script type="module">
+        import FundMeAbi from './FundMe.json' assert { type: 'json' };
+
+        const contractAddress = "0x0dE9967DBe2262A1D17a517B0Aef947eB9520dEC"; // Replace with your FundMe contract address
+        let provider;
+        let signer;
+        let contract;
+
+        const connectBtn = document.getElementById('connectBtn');
+        const fundBtn = document.getElementById('fundBtn');
+        const withdrawBtn = document.getElementById('withdrawBtn');
+        const accountP = document.getElementById('account');
+        const statusP = document.getElementById('status');
+
+        connectBtn.onclick = async () => {
+            if (!window.ethereum) return alert("MetaMask not detected!");
+            provider = new ethers.BrowserProvider(window.ethereum);
+            await provider.send("eth_requestAccounts", []);
+            signer = await provider.getSigner();
+            const account = await signer.getAddress();
+            accountP.innerText = `Connected as: ${account}`;
+            contract = new ethers.Contract(contractAddress, FundMeAbi, signer);
+        };
+
+        fundBtn.onclick = async () => {
+            if (!contract) return alert("Connect wallet first!");
+            const amount = document.getElementById('fundAmount').value;
+            try {
+                statusP.innerText = "Sending transaction...";
+                const tx = await contract.fund({ value: ethers.parseEther(amount) });
+                await tx.wait();
+                statusP.innerText = `Funding of ${amount} ETH complete!`;
+            } catch (err) {
+                console.error(err);
+                statusP.innerText = "Transaction failed";
+            }
+        };
+
+        withdrawBtn.onclick = async () => {
+            if (!contract) return alert("Connect wallet first!");
+            try {
+                statusP.innerText = "Sending withdraw transaction...";
+                const tx = await contract.withdraw();
+                await tx.wait();
+                statusP.innerText = "Withdraw successful!";
+            } catch (err) {
+                console.error(err);
+                statusP.innerText = "Withdraw failed (not owner or error)";
+            }
+        };
+    </script>
+</body>
+
+</html>
